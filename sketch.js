@@ -43,15 +43,16 @@ function draw() {
 
     if (selectedImage) {
       image(selectedImage, 0, 0, width, height);
+      selectedImage = null; // 重置選擇的圖片
     }
   }
 }
 
 function detectGesture(hand) {
   // 偵測手勢的邏輯
-  // 這裡需要根據手指位置與角度來判斷是剪刀、石頭還是布
-  // 範例邏輯（需根據實際需求調整）：
   const fingers = hand.annotations;
+  if (!fingers) return null; // 確保 annotations 存在
+
   const thumb = fingers.thumb[3];
   const indexFinger = fingers.indexFinger[3];
   const middleFinger = fingers.middleFinger[3];
