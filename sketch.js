@@ -1,94 +1,73 @@
+let handpose;
 let video;
-let poseNet, handpose;
-let noseX = 0, noseY = 0;
-let maskImages = {};
-let currentMask = '7071198.jpg'; // 預設面罩圖片
+let predictions = [];
+let selectedImage;
 
 function preload() {
-  maskImages['7024086.jpg'] = loadImage('7024086.jpg'); // 剪刀
-  maskImages['7024376.jpg'] = loadImage('7024376.jpg'); // 石頭
-  maskImages['7071198.jpg'] = loadImage('7071198.jpg'); // 布
+  // 預載入圖片
+  scissorsImage = loadImage('7024086.jpg');
+  rockImage = loadImage('7024376.jpg');
+  paperImage = loadImage('7071198.jpg');
 }
 
 function setup() {
-  createCanvas(400, 400);
-
-  // 初始化視訊
+  createCanvas(640, 480);
   video = createCapture(VIDEO);
-  video.size(400, 400);
-  video.hide(); // 確保視訊不直接顯示，改由 draw() 中繪製
-  console.log('Video initialized:', video);
+  video.size(width, height);
+  video.hide();
 
-  // 初始化 PoseNet
-  poseNet = ml5.poseNet(video, modelLoaded);
-  poseNet.on('pose', gotPoses);
+  handpose = ml5.handpose(video, modelReady);
+  handpose.on('predict', results => {
+    predictions = results;
+  });
+}
 
-  // 初始化 Handpose
-  handpose = ml5.handpose(video, () => console.log('Handpose 模型已載入'));
-  handpose.on('predict', gotHandPose);
+function modelReady() {
+  console.log('Handpose model ready!');
 }
 
 function draw() {
-  background(220);
+  image(video, 0, 0, width, height);
 
-  // 確保視訊正確顯示
-  if (video) {
-    image(video, 0, 0);
-    console.log('Video metadata loaded:', video.loadedmetadata);
-  } else {
-    console.error('Video not initialized');
-  }
-
-  // 使用圖片作為面罩
-  if (maskImages[currentMask]) {
-    image(maskImages[currentMask], noseX - 50, noseY - 25, 100, 50); // 調整圖片位置與大小
-  }
-}
-
-function modelLoaded() {
-  console.log('PoseNet 模型已載入');
-}
-
-function gotPoses(poses) {
-  if (poses.length > 0) {
-    noseX = poses[0].pose.nose.x;
-    noseY = poses[0].pose.nose.y;
-  }
-}
-
-function gotHandPose(predictions) {
   if (predictions.length > 0) {
-    const landmarks = predictions[0].landmarks;
+    const hand = predictions[0];
+    const gesture = detectGesture(hand);
 
-    // 簡單手勢判斷（剪刀、石頭、布）
-    if (isScissors(landmarks)) {
-      currentMask = '7024086.jpg'; // 剪刀
-    } else if (isRock(landmarks)) {
-      currentMask = '7024376.jpg'; // 石頭
-    } else if (isPaper(landmarks)) {
-      currentMask = '7071198.jpg'; // 布
+    if (gesture === 'scissors') {
+      selectedImage = scissorsImage;
+    } else if (gesture === 'rock') {
+      selectedImage = rockImage;
+    } else if (gesture === 'paper') {
+      selectedImage = paperImage;
+    }
+
+    if (selectedImage) {
+      image(selectedImage, 0, 0, width, height);
     }
   }
 }
 
-// 判斷剪刀手勢
-function isScissors(landmarks) {
-  // 簡單判斷：食指和中指伸直，其餘手指彎曲
-  const [indexTip, middleTip, ringTip, pinkyTip] = [
-    landmarks[8], landmarks[12], landmarks[16], landmarks[20]
-  ];
-  return indexTip[1] < landmarks[6][1] && middleTip[1] < landmarks[10][1] &&
-         ringTip[1] > landmarks[14][1] && pinkyTip[1] > landmarks[18][1];
+function detectGesture(hand) {
+  // 偵測手勢的邏輯
+  // 這裡需要根據手指位置與角度來判斷是剪刀、石頭還是布
+  // 範例邏輯（需根據實際需求調整）：
+  const fingers = hand.annotations;
+  const thumb = fingers.thumb[3];
+  const indexFinger = fingers.indexFinger[3];
+  const middleFinger = fingers.middleFinger[3];
+  const ringFinger = fingers.ringFinger[3];
+  const pinky = fingers.pinky[3];
+
+  if (distance(indexFinger, middleFinger) > 50 && distance(ringFinger, pinky) < 30) {
+    return 'scissors';
+  } else if (distance(indexFinger, thumb) < 30 && distance(middleFinger, ringFinger) < 30) {
+    return 'rock';
+  } else if (distance(indexFinger, thumb) > 50 && distance(pinky, thumb) > 50) {
+    return 'paper';
+  }
+  return null;
 }
 
-// 判斷石頭手勢
-function isRock(landmarks) {
-  // 簡單判斷：所有手指彎曲
-  return landmarks.slice(8, 21).every(pt => pt[1] > landmarks[0][1]);
-}
-
-// 判斷布手勢
-function isPaper(landmarks) {
-  // 簡單判斷：所有手指伸直
-  return landmarks.slice(8, 21).every(pt => pt[1] < landmarks[0][1]);
+function distance(point1, point2) {
+  return dist(point1[0], point1[1], point2[0], point2[1]);
 }
