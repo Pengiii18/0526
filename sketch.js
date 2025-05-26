@@ -12,20 +12,28 @@ function preload() {
 
 function setup() {
   createCanvas(400, 400);
+
+  // 初始化視訊
   video = createCapture(VIDEO);
   video.size(400, 400);
-  video.hide();
+  video.hide(); // 確保視訊不直接顯示，改由 draw() 中繪製
 
+  // 初始化 PoseNet
   poseNet = ml5.poseNet(video, modelLoaded);
   poseNet.on('pose', gotPoses);
 
+  // 初始化 Handpose
   handpose = ml5.handpose(video, () => console.log('Handpose 模型已載入'));
   handpose.on('predict', gotHandPose);
 }
 
 function draw() {
   background(220);
-  image(video, 0, 0);
+
+  // 確保視訊正確顯示
+  if (video) {
+    image(video, 0, 0);
+  }
 
   // 使用圖片作為面罩
   if (maskImages[currentMask]) {
