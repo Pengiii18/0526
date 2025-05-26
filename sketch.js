@@ -17,6 +17,7 @@ function setup() {
   video = createCapture(VIDEO);
   video.size(400, 400);
   video.hide(); // 確保視訊不直接顯示，改由 draw() 中繪製
+  console.log('Video initialized:', video);
 
   // 初始化 PoseNet
   poseNet = ml5.poseNet(video, modelLoaded);
@@ -33,6 +34,9 @@ function draw() {
   // 確保視訊正確顯示
   if (video) {
     image(video, 0, 0);
+    console.log('Video metadata loaded:', video.loadedmetadata);
+  } else {
+    console.error('Video not initialized');
   }
 
   // 使用圖片作為面罩
